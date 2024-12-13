@@ -10,6 +10,8 @@ import { filterPipe, paginatePipe, projectPipe, searchPipe, sortPipe } from "../
 import validateId from "../../lib/utils/validate-id.js";
 import handleValidation from "../../lib/utils/handle-validation.js";
 import { UserSchema } from "../../lib/schemes/user.schema.js";
+import { RESTResponse } from "../../lib/utils/rest-api-response.js";
+import { ROLE } from "../../lib/constants/roles.js";
 
 export default class UserHandlers {
   private async removeFilesAndHandleNotFound(req: Request, res: Response, next: NextFunction) {
@@ -19,8 +21,8 @@ export default class UserHandlers {
 
   getUsers = catchAsync(async (req: RequestType, res: Response, next: NextFunction) => {
     const pipeline: PipelineStage[] = [
-      { $project: { password: 0, wishlist: 0 } },
-      ...searchPipe(req, ["username", "email", "firstName", "lastName", "role"]),
+      { $project: { password: 0 } },
+      ...searchPipe(req, ["username", "firstName", "lastName", "role", "student.studentNumber", "student.IDNumber"]),
       ...filterPipe(req),
       ...sortPipe(req),
       ...projectPipe(req),
@@ -29,17 +31,17 @@ export default class UserHandlers {
 
     const users = await User.aggregate(pipeline);
 
-    res.status(200).json({ status: "success", statusCode: 200, data: users[0] }).status(200);
+    RESTResponse.success(users[0], res);
   });
 
   getUser = catchAsync(async (req: RequestType, res: Response, next: NextFunction) => {
     validateId(req.params.id);
 
-    const user = await User.findById(req.params.id, { wishlist: 0 });
+    const user = await User.findById(req.params.id);
 
     if (!user) return next(new AppError(`Couldn't find a user with an id of ${req.params.id}`, 404));
 
-    res.status(200).json({ status: "success", statusCode: 200, data: { user } }).status(200);
+    RESTResponse.success({ user }, res);
   });
 
   createUser = catchAsync(async (req: RequestType, res: Response, next: NextFunction) => {
@@ -51,35 +53,37 @@ export default class UserHandlers {
     // Create the user
     const newUser = await User.create(candidate);
 
-    res.status(201).json({ status: "success", statusCode: 201, data: { newUser } });
+    RESTResponse.created({ newUser }, res);
   });
 
   updateUser = catchAsync(async (req: RequestType, res: Response, next: NextFunction) => {
     validateId(req.params.id);
 
+    // Only allow `report` field to be modified if the user is a teacher
+    if (req.user.role === ROLE.TEACHER) req.body = { studentData: { report: req.body.studentData?.report } };
+
     // Prepare the user data
-    const candidate = handleValidation(UserSchema.partial().safeParse(req.body));
+    const userData = handleValidation(UserSchema.deepPartial().safeParse(req.body));
 
     // Only add the photo if it exists so that it doesn't overrides the default photo with blank one
     if (req.file) {
-      candidate.photo = req.file.filename;
+      userData.photo = req.file.filename;
 
-      const user = await User.findById(req.params.id, { wishlist: 0 });
+      const user = await User.findById(req.params.id);
 
       // Remove old user photo from the storage
       user?.photo && (await removeFiles([user.photo], "public/images/users"));
     }
 
     // Update the user
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, candidate, {
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, userData, {
       new: true,
       runValidators: true,
-      projection: { wishlist: 0 },
     });
 
     if (!updatedUser) return await this.removeFilesAndHandleNotFound(req, res, next);
 
-    res.status(200).json({ status: "success", statusCode: 200, data: { updatedUser } });
+    RESTResponse.success({ updatedUser }, res);
   });
 
   deleteUser = catchAsync(async (req: RequestType, res: Response, next: NextFunction) => {
@@ -88,6 +92,6 @@ export default class UserHandlers {
 
     if (!user) return next(new AppError(`Couldn't find a user with an id of ${req.params.id}`, 404));
 
-    res.status(204).json({ status: "success", statusCode: 204, data: null });
+    RESTResponse.deleted(res);
   });
 }

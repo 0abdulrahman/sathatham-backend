@@ -3,6 +3,8 @@ import UserHandlers from "./user.controller.js";
 import authenticate from "../../middlewares/authenticate.middleware.js";
 import { ImageUpload } from "../../lib/utils/images-upload.js";
 import { handleRolesHierarchy } from "../../middlewares/handle-roles-hierarchy.middleware.js";
+import authorize from "../../middlewares/authorize.middleware.js";
+import { ROLE } from "../../lib/constants/roles.js";
 
 export const userRouter = Router();
 const userHandlers = new UserHandlers();
@@ -12,11 +14,23 @@ userRouter.use(authenticate);
 
 userRouter
   .route("/")
-  .get(userHandlers.getUsers)
-  .post(imageUpload.handleUpload, imageUpload.optimizeUpload, handleRolesHierarchy, userHandlers.createUser);
+  .get(authorize(ROLE.MANAGER, ROLE.MODERATOR, ROLE.TEACHER), userHandlers.getUsers)
+  .post(
+    authorize(ROLE.MANAGER, ROLE.MODERATOR),
+    imageUpload.handleUpload,
+    imageUpload.optimizeUpload,
+    handleRolesHierarchy,
+    userHandlers.createUser
+  );
 
 userRouter
   .route("/:id")
-  .get(userHandlers.getUser)
-  .patch(imageUpload.handleUpload, imageUpload.optimizeUpload, handleRolesHierarchy, userHandlers.updateUser)
-  .delete(handleRolesHierarchy, userHandlers.deleteUser);
+  .get(authorize(ROLE.MANAGER, ROLE.MODERATOR, ROLE.TEACHER), userHandlers.getUser)
+  .patch(
+    authorize(ROLE.MANAGER, ROLE.MODERATOR, ROLE.TEACHER),
+    imageUpload.handleUpload,
+    imageUpload.optimizeUpload,
+    handleRolesHierarchy,
+    userHandlers.updateUser
+  )
+  .delete(authorize(ROLE.MANAGER, ROLE.MODERATOR), handleRolesHierarchy, userHandlers.deleteUser);

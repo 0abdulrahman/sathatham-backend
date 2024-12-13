@@ -14,11 +14,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const mongoose_1 = require("mongoose");
-const validator_1 = __importDefault(require("validator"));
-const bcrypt_1 = __importDefault(require("bcrypt"));
 const crypto_1 = __importDefault(require("crypto"));
 const roles_1 = require("../../src/lib/constants/roles");
 const remove_files_1 = require("../../src/lib/utils/remove-files");
+const bcrypt_1 = __importDefault(require("bcrypt"));
 const userSchema = new mongoose_1.Schema({
     username: {
         type: String,
@@ -26,13 +25,6 @@ const userSchema = new mongoose_1.Schema({
         unique: true,
         trim: true,
         minLength: [3, "Username must be at least 3 characters!"],
-    },
-    email: {
-        type: String,
-        required: [true, "Email is required!"],
-        unique: true,
-        trim: true,
-        validate: [validator_1.default.isEmail, "Invalid email address!"],
     },
     password: {
         type: String,
@@ -56,12 +48,18 @@ const userSchema = new mongoose_1.Schema({
         type: String,
         required: [true, "First name is required!"],
         trim: true,
-        minLength: [3, "First name must be at least 3 characters long!"],
+        minLength: [2, "First name must be at least 2 characters long!"],
     },
-    lastName: {
+    familyName: {
         type: String,
+        required: [true, "Family name is required!"],
         trim: true,
-        minLength: [3, "Last name must be at least 3 characters long!"],
+        minLength: [2, "Family name must be at least 2 characters long!"],
+    },
+    sex: {
+        type: String,
+        enum: ["male", "female"],
+        required: [true, "Student sex is required"],
     },
     role: {
         type: String,
@@ -71,30 +69,45 @@ const userSchema = new mongoose_1.Schema({
     photo: {
         type: String,
     },
-    active: {
-        type: Boolean,
-        default: true,
-        select: false,
-    },
-    blocked: {
-        type: Boolean,
-        default: false,
-    },
-    passwordChangeDate: {
-        type: Date,
-    },
-    wishlist: [
-        {
-            type: mongoose_1.Schema.Types.ObjectId,
-            ref: "Product",
-            default: [],
+    studentData: {
+        approved: {
+            type: Boolean,
+            default: false,
         },
-    ],
-    passwordResetToken: {
-        type: String,
-    },
-    passwordResetExpiration: {
-        type: Date,
+        studentNumber: {
+            type: Number,
+        },
+        IDNumber: {
+            type: String,
+        },
+        class: {
+            type: String,
+        },
+        GPA: {
+            type: Number,
+            min: [0, "GPA number is invalid"],
+        },
+        fatherName: {
+            type: String,
+        },
+        motherName: {
+            type: String,
+        },
+        contactInformation: {
+            type: String,
+        },
+        birthDate: {
+            type: Date,
+        },
+        nationality: {
+            type: String,
+        },
+        address: {
+            type: String,
+        },
+        report: {
+            type: String,
+        },
     },
 }, {
     timestamps: true,
@@ -110,22 +123,13 @@ userSchema.pre("save", function (next) {
         this.password = yield bcrypt_1.default.hash(this.password, 12);
         // Delete the password confirmation field before saving the document
         this.passwordConfirm = undefined;
-        // If this isn't a new document (updating not creating), change the password change-date to compare it later with the token expiration-date,
-        // and substract 1 second to make sure the token issuance-date is newer than the password change-date
-        if (!this.isNew)
-            this.passwordChangeDate = Date.now() - 1000;
         // Run the next middleware
         next();
     });
 });
-// Apply this middleware to all `find` queries
-userSchema.pre(/^find/, function () {
-    // `this` refers to the find query
-    this.find({ active: { $ne: false } });
-});
 // Create a virtual property `fullName` with a getter and setter.
 userSchema.virtual("fullName").get(function () {
-    return `${this.firstName} ${this.lastName}`;
+    return `${this.firstName} ${this.familyName}`;
 });
 const handleUserDelete = function (next) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -165,18 +169,6 @@ userSchema.pre("deleteMany", function (next) {
         }
     });
 });
-/**
- * Checks if the password has been changed after the JWT token was issued.
- * @param JWTTimestamp - The timestamp of the JWT token issuance.
- * @returns `true` if the password was changed after the token was issued, otherwise `false`.
- */
-userSchema.methods.passwordChangedAfterToken = function (JWTTimestamp) {
-    // If the passwordChangeDate property doesn't exist on the user's document, it means they have never changed their password yet.
-    if (!this.passwordChangeDate)
-        return false;
-    // Return the result of checking whether the token issue-date is before the password change-date
-    return JWTTimestamp < this.passwordChangeDate;
-};
 /**
  * Generates a password-reset token, ecrypts it and saves it in the user's schema then returns the plain (unencrypted) token.
  * @returns the unencrypted `token`.

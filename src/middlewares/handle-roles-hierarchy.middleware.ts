@@ -19,7 +19,7 @@ export const handleRolesHierarchy = catchAsync(async (req: RequestType, res: Res
   const roles = [
     { role: ROLE.MANAGER, power: 999999999999999 },
     { role: ROLE.MODERATOR, power: 3 },
-    { role: ROLE.TEACHER, power: 1 },
+    { role: ROLE.TEACHER, power: 2 },
     { role: ROLE.STUDENT, power: 1 },
   ];
 

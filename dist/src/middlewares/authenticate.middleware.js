@@ -36,12 +36,6 @@ const authenticate = (0, catch_async_js_1.default)((req, res, next) => __awaiter
     const user = yield user_model_js_1.User.findById(decodedToken.id);
     if (!user)
         return next(new app_error_js_1.default("This token belongs to a user that no longer exists!", 401));
-    // - Check if the user has changed their password AFTER the token was issued, if they did that means this token should not be valid
-    //   and we have to prevent anyone from accessing the app with this old token
-    if (user.passwordChangedAfterToken(new Date(decodedToken.iat * 1000))) {
-        // => Multiply the issue date by 1000 because it's in seconds not milliseconds.
-        return next(new app_error_js_1.default("User recently changed their password, please login again!", 401));
-    }
     // - Else if everything's fine, add the user id in the request. We'll need it later in next middlewares.
     req.user = user;
     // - Grant access to the protected-route

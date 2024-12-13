@@ -1,12 +1,10 @@
 import { z } from "zod";
 import { isValidObjectId } from "mongoose";
-import validator from "validator";
 import { ROLE } from "../constants/roles";
 
 export const UserSchema = z
   .object({
-    username: z.string({ required_error: "Username is required!" }).min(2, "Username must be at least 2 characters long."),
-    email: z.string({ required_error: "Email is required!" }).email("Please provide a valid email address."),
+    username: z.string({ required_error: "Username is required" }).min(1, "Username is required"),
     password: z
       .string({ required_error: "Password is required!" })
       .regex(
@@ -15,37 +13,41 @@ export const UserSchema = z
       ),
     passwordConfirm: z.string({ required_error: "Password confirmation is required!" }),
     firstName: z.string({ required_error: "First name is required!" }).min(2, "First name must be at least 2 characters long."),
-    lastName: z.string().min(2, "Last name must be at least 2 characters long.").optional(),
+    familyName: z.string({ required_error: "Family name is required!" }).min(2, "Family name must be at least 2 characters long."),
+    sex: z.enum(["male", "female"], { required_error: "User sex is required", message: "Please provide a valid sex type" }),
     role: z.nativeEnum(ROLE, { message: "Invalid role specified." }).default(ROLE.STUDENT),
     photo: z.string().optional(),
-    blocked: z.boolean().default(false),
-    addresses: z
-      .array(
-        z.object({
-          name: z.string({ required_error: "Address name is required" }).min(1, "Address name is required"),
-          city: z.string({ required_error: "Address city is required" }).min(1, "Address city is required"),
-          street: z.string({ required_error: "Address street is required" }).min(1, "Address street is required"),
-          phone: z.custom((val) => validator.isMobilePhone(val), "Addres phone number must be a valid number!"),
-        })
-      )
+    grade: z.string().optional(),
+    studentData: z
+      .object({
+        approved: z.boolean().default(false),
+        studentNumber: z.number({ required_error: "Student number is required!" }).min(0, "Student number is invalid."),
+        IDNumber: z.string({ required_error: "Student ID number is required!" }).min(1, "Student ID number is invalid."),
+        class: z.string({ required_error: "Student class is required." }).min(1, "Student class  is required"),
+        GPA: z.number().optional(),
+        fatherName: z.string({ required_error: "Father name is required!" }).min(2, "Father name must be at least 2 characters long."),
+        motherName: z.string({ required_error: "Mother name is required!" }).min(2, "Mother name must be at least 2 characters long."),
+        contactInformation: z.string({ required_error: "Contact information is required" }).min(1, "Contact information is required"),
+        birthDate: z.coerce.date({ required_error: "Birth date is required", invalid_type_error: "Please provide a valid date" }),
+        nationality: z.string({ required_error: "Nationality is required" }).min(1, "Nationality is required"),
+        address: z.string({ required_error: "Address is required" }).min(1, "Address is required"),
+        report: z.string().optional(),
+      })
       .optional(),
-    wishlist: z.array(z.string()).default([]),
   })
   .strict();
 
 export const DocumentSchema = z
   .object({
     _id: z.custom((val) => isValidObjectId(val)),
-    createAt: z.date(),
+    createdAt: z.date(),
     updatedAt: z.date(),
     fullName: z.string(),
-    passwordChangeDate: z.union([z.date(), z.number()]).optional(),
-    passwordResetToken: z.string().optional(),
-    passwordResetExpiration: z.date().optional(),
-    active: z.boolean().default(true),
-    passwordChangedAfterToken: z.function().args(z.date()).returns(z.boolean()),
-    generatePasswordResetToken: z.function().returns(z.string()),
   })
-  .merge(UserSchema);
+  .merge(UserSchema)
+  .refine((values) => values.password !== values.passwordConfirm, {
+    message: "Passwords do not match!",
+    path: ["passwordConfirm"],
+  });
 
 export type UserI = z.infer<typeof DocumentSchema>;

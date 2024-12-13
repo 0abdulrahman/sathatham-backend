@@ -1,12 +1,10 @@
 import { model, Query, Schema } from "mongoose";
 
-import validator from "validator";
-import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { ROLE } from "../../src/lib/constants/roles";
 import { UserI } from "../../src/lib/schemes/user.schema";
 import { removeFiles } from "../../src/lib/utils/remove-files";
-
+import bcrypt from "bcrypt";
 const userSchema = new Schema<UserI>(
   {
     username: {
@@ -15,13 +13,6 @@ const userSchema = new Schema<UserI>(
       unique: true,
       trim: true,
       minLength: [3, "Username must be at least 3 characters!"],
-    },
-    email: {
-      type: String,
-      required: [true, "Email is required!"],
-      unique: true,
-      trim: true,
-      validate: [validator.isEmail, "Invalid email address!"],
     },
     password: {
       type: String,
@@ -45,12 +36,18 @@ const userSchema = new Schema<UserI>(
       type: String,
       required: [true, "First name is required!"],
       trim: true,
-      minLength: [3, "First name must be at least 3 characters long!"],
+      minLength: [2, "First name must be at least 2 characters long!"],
     },
-    lastName: {
+    familyName: {
       type: String,
+      required: [true, "Family name is required!"],
       trim: true,
-      minLength: [3, "Last name must be at least 3 characters long!"],
+      minLength: [2, "Family name must be at least 2 characters long!"],
+    },
+    sex: {
+      type: String,
+      enum: ["male", "female"],
+      required: [true, "Student sex is required"],
     },
     role: {
       type: String,
@@ -60,30 +57,45 @@ const userSchema = new Schema<UserI>(
     photo: {
       type: String,
     },
-    active: {
-      type: Boolean,
-      default: true,
-      select: false,
-    },
-    blocked: {
-      type: Boolean,
-      default: false,
-    },
-    passwordChangeDate: {
-      type: Date,
-    },
-    wishlist: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Product",
-        default: [],
+    studentData: {
+      approved: {
+        type: Boolean,
+        default: false,
       },
-    ],
-    passwordResetToken: {
-      type: String,
-    },
-    passwordResetExpiration: {
-      type: Date,
+      studentNumber: {
+        type: Number,
+      },
+      IDNumber: {
+        type: String,
+      },
+      class: {
+        type: String,
+      },
+      GPA: {
+        type: Number,
+        min: [0, "GPA number is invalid"],
+      },
+      fatherName: {
+        type: String,
+      },
+      motherName: {
+        type: String,
+      },
+      contactInformation: {
+        type: String,
+      },
+      birthDate: {
+        type: Date,
+      },
+      nationality: {
+        type: String,
+      },
+      address: {
+        type: String,
+      },
+      report: {
+        type: String,
+      },
     },
   },
   {
@@ -93,7 +105,7 @@ const userSchema = new Schema<UserI>(
   }
 );
 
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function (this, next) {
   // Only run this function if the password has been modified to avoid running it if any other field is modified
   if (!this.isModified("password")) return next();
 
@@ -103,23 +115,13 @@ userSchema.pre("save", async function (next) {
   // Delete the password confirmation field before saving the document
   (this.passwordConfirm as any) = undefined;
 
-  // If this isn't a new document (updating not creating), change the password change-date to compare it later with the token expiration-date,
-  // and substract 1 second to make sure the token issuance-date is newer than the password change-date
-  if (!this.isNew) this.passwordChangeDate = Date.now() - 1000;
-
   // Run the next middleware
   next();
 });
 
-// Apply this middleware to all `find` queries
-userSchema.pre(/^find/, function () {
-  // `this` refers to the find query
-  (this as any).find({ active: { $ne: false } });
-});
-
 // Create a virtual property `fullName` with a getter and setter.
-userSchema.virtual("fullName").get(function () {
-  return `${this.firstName} ${this.lastName}`;
+userSchema.virtual("fullName").get(function (this: UserI) {
+  return `${this.firstName} ${this.familyName}`;
 });
 
 const handleUserDelete = async function (this: Query<UserI[], UserI>, next: (err?: Error) => void) {
@@ -160,19 +162,6 @@ userSchema.pre("deleteMany", async function (this: Query<UserI[], UserI>, next) 
     next(error instanceof Error ? error : new Error(String(error)));
   }
 });
-
-/**
- * Checks if the password has been changed after the JWT token was issued.
- * @param JWTTimestamp - The timestamp of the JWT token issuance.
- * @returns `true` if the password was changed after the token was issued, otherwise `false`.
- */
-userSchema.methods.passwordChangedAfterToken = function (JWTTimestamp: Date) {
-  // If the passwordChangeDate property doesn't exist on the user's document, it means they have never changed their password yet.
-  if (!this.passwordChangeDate) return false;
-
-  // Return the result of checking whether the token issue-date is before the password change-date
-  return JWTTimestamp < this.passwordChangeDate;
-};
 
 /**
  * Generates a password-reset token, ecrypts it and saves it in the user's schema then returns the plain (unencrypted) token.

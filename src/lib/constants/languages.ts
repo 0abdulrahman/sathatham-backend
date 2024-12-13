@@ -1,4 +1,5 @@
 export enum Languages {
-  ARABIC = 'ar',
-  ENGLISH = 'en',
+  THAI = "th",
+  ENGLISH = "en",
+  ARABIC = "ar",
 }

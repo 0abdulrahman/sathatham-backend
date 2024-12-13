@@ -7,6 +7,6 @@ exports.dbConnection = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 exports.dbConnection = mongoose_1.default
     .connect(process.env.MONGODB_URI, {
-    dbName: "e-commerce",
+    dbName: "sathatham",
 })
     .then(() => console.log("🟢 Successfully connected to the database!"));

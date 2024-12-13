@@ -7,7 +7,7 @@ import catchAsync from "./catch-async.js";
 import AppError from "./app-error.js";
 import { RequestFiles } from "../types/request.js";
 
-type FileName = "user";
+type FileName = "user" | "student";
 
 const generateFileName = (directory: string, uniqueFileName: string) => {
   if (process.env.NODE_ENV === "production") {

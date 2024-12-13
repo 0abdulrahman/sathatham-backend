@@ -18,20 +18,10 @@ const not_found_route_middleware_js_1 = __importDefault(require("./middlewares/n
 const error_handling_middleware_js_1 = __importDefault(require("./middlewares/error-handling.middleware.js"));
 exports.app = (0, express_1.default)();
 //# =============================================== SECURITY ===============================================
-// TODO: Add protection against CSRF attack and add a logger
-// TODO: Newest compounds should be the newest 3 compounds of each developer
-// * Review functionality of every handler
-// * Make an endpoint for site stats.
-// * Make the images path same as Khaleds
-// * Add the images path when saving it in the user DOC
-// * Pagination, filter, sort should be added to approperiate endpoints throughout the application
-// * Handle bad id param error for everything;
-// * Delete the document images on each collection when it gets deleted
-// * Add endpoints to delete compound and property images
 exports.app.enable("trust proxy");
 // Enable cors headers for all endpoints
 const corsOptions = {
-    origin: ["http://localhost:3000", "http://localhost:5173", "https://thelanerealestate.com", "https://admin.thelanerealestate.com"],
+    origin: ["http://localhost:3000", "http://localhost:5173"],
     credentials: true,
     allowedHeaders: ["Accept-Language", "Content-Type", "Authorization"],
 };
@@ -58,8 +48,8 @@ exports.app.use(sanitize_middleware_js_1.default);
 exports.app.use((0, compression_1.default)());
 //# =============================================== /SECURITY ===============================================
 // Allow access to any static files inside the public folder
-// Derive __dirname equivalent
-const pathName = path_1.default.join(__dirname, "public");
+const pathName = path_1.default.join(__dirname, "../", "public");
+// Serve static files
 exports.app.use(express_1.default.static(pathName));
 //* ================================================ ROUTES ================================================
 (0, bootstrap_js_1.default)(exports.app);

@@ -15,22 +15,11 @@ import errorHandlingMiddleware from "./middlewares/error-handling.middleware.js"
 export const app = express();
 
 //# =============================================== SECURITY ===============================================
-// TODO: Add protection against CSRF attack and add a logger
-// TODO: Newest compounds should be the newest 3 compounds of each developer
-// * Review functionality of every handler
-// * Make an endpoint for site stats.
-// * Make the images path same as Khaleds
-// * Add the images path when saving it in the user DOC
-// * Pagination, filter, sort should be added to approperiate endpoints throughout the application
-// * Handle bad id param error for everything;
-// * Delete the document images on each collection when it gets deleted
-// * Add endpoints to delete compound and property images
-
 app.enable("trust proxy");
 
 // Enable cors headers for all endpoints
 const corsOptions: CorsOptions = {
-  origin: ["http://localhost:3000", "http://localhost:5173", "https://thelanerealestate.com", "https://admin.thelanerealestate.com"],
+  origin: ["http://localhost:3000", "http://localhost:5173"],
   credentials: true,
   allowedHeaders: ["Accept-Language", "Content-Type", "Authorization"],
 };
@@ -67,9 +56,9 @@ app.use(compression());
 //# =============================================== /SECURITY ===============================================
 
 // Allow access to any static files inside the public folder
-// Derive __dirname equivalent
+const pathName = path.join(__dirname, "../", "public");
 
-const pathName = path.join(__dirname, "public");
+// Serve static files
 app.use(express.static(pathName));
 
 //* ================================================ ROUTES ================================================

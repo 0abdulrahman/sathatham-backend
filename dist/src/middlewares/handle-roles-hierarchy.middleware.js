@@ -32,7 +32,7 @@ exports.handleRolesHierarchy = (0, catch_async_js_1.default)((req, res, next) =>
     const roles = [
         { role: roles_js_1.ROLE.MANAGER, power: 999999999999999 },
         { role: roles_js_1.ROLE.MODERATOR, power: 3 },
-        { role: roles_js_1.ROLE.TEACHER, power: 1 },
+        { role: roles_js_1.ROLE.TEACHER, power: 2 },
         { role: roles_js_1.ROLE.STUDENT, power: 1 },
     ];
     // Get the role of the current user and the target user
